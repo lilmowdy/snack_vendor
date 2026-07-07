@@ -1,0 +1,5 @@
+User       → everyone on the platform, role tells us who they are
+Vendor     → the shops, linked to a User (the owner)
+MenuItem   → what each vendor sells, linked to Vendor
+Order      → a customer's order, tracks status + total
+OrderItem  → line items inside an order (the receipt lines)

@@ -1,0 +1,4 @@
+SECRET_KEY          → Flask's internal security key
+DATABASE_URI        → where the db file lives
+TRACK_MODIFICATIONS → turn off a Flask warning we don't need
+JWT_SECRET_KEY      → for login tokens later

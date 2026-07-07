@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>snack_vendor</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: sans-serif;
+      background: #0f0f0f;
+      color: #f0f0f0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .card {
+      background: #1a1a1a;
+      padding: 2rem;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 400px;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      margin-bottom: 0.3rem;
+      color: #ff6b00;
+    }
+
+    p.sub {
+      font-size: 0.85rem;
+      color: #888;
+      margin-bottom: 1.5rem;
+    }
+
+    .tabs {
+      display: flex;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid #333;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 0.6rem;
+      background: none;
+      border: none;
+      color: #888;
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+
+    .tab.active {
+      color: #ff6b00;
+      border-bottom: 2px solid #ff6b00;
+    }
+
+    .form { display: none; flex-direction: column; gap: 0.8rem; }
+    .form.active { display: flex; }
+
+    input, select {
+      padding: 0.7rem;
+      border-radius: 8px;
+      border: 1px solid #333;
+      background: #111;
+      color: #f0f0f0;
+      font-size: 0.95rem;
+    }
+
+    button.submit {
+      padding: 0.8rem;
+      background: #ff6b00;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      margin-top: 0.5rem;
+    }
+
+    button.submit:hover { background: #e05e00; }
+
+    .msg {
+      margin-top: 1rem;
+      font-size: 0.85rem;
+      color: #ff6b00;
+      min-height: 1.2rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>snack_vendor</h1>
+    <p class="sub">order. deliver. repeat.</p>
+
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('login')">Login</button>
+      <button class="tab" onclick="switchTab('register')">Register</button>
+    </div>
+
+    <div class="form active" id="login">
+      <input type="email" id="login-email" placeholder="Email">
+      <input type="password" id="login-pass" placeholder="Password">
+      <button class="submit" onclick="login()">Login</button>
+    </div>
+
+    <div class="form" id="register">
+      <input type="text" id="reg-name" placeholder="Full Name">
+      <input type="email" id="reg-email" placeholder="Email">
+      <input type="password" id="reg-pass" placeholder="Password">
+      <select id="reg-role">
+        <option value="customer">Customer</option>
+        <option value="vendor">Vendor</option>
+        <option value="rider">Rider</option>
+      </select>
+      <button class="submit" onclick="register()">Create Account</button>
+    </div>
+
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <script>
+    const API = 'http://127.0.0.1:5000';
+
+    function switchTab(tab) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.form').forEach(f => f.classList.remove('active'));
+      document.getElementById(tab).classList.add('active');
+      event.target.classList.add('active');
+    }
+
+    function msg(text) {
+      document.getElementById('msg').innerText = text;
+    }
+
+    async function login() {
+      const email = document.getElementById('login-email').value;
+      const pass = document.getElementById('login-pass').value;
+
+      const res = await fetch(`${API}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password: pass })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('role', data.role);
+        localStorage.setItem('name', data.name);
+        msg('welcome back ' + data.name + '!');
+        setTimeout(() => {
+          if (data.role === 'vendor') window.location = '/vendor';
+          else window.location = '/customer';
+        }, 800);
+      } else {
+        msg(data.error || 'login failed');
+      }
+    }
+
+    async function register() {
+      const name = document.getElementById('reg-name').value;
+      const email = document.getElementById('reg-email').value;
+      const pass = document.getElementById('reg-pass').value;
+      const role = document.getElementById('reg-role').value;
+
+      const res = await fetch(`${API}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password: pass, role })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        msg('account created! please login.');
+        switchTab('login');
+      } else {
+        msg(data.error || 'registration failed');
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>snack_vendor | dashboard</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: sans-serif; background: #0f0f0f; color: #f0f0f0; }
+    header {
+      background: #1a1a1a; padding: 1rem 1.5rem;
+      display: flex; justify-content: space-between;
+      align-items: center; border-bottom: 1px solid #333;
+    }
+    header h1 { color: #ff6b00; font-size: 1.2rem; }
+    header button {
+      background: none; border: 1px solid #555;
+      color: #f0f0f0; padding: 0.3rem 0.8rem;
+      border-radius: 6px; cursor: pointer; font-size: 0.8rem;
+    }
+    .tabs {
+      display: flex; background: #1a1a1a;
+      border-bottom: 1px solid #333;
+    }
+    .tab {
+      flex: 1; padding: 0.8rem; background: none;
+      border: none; color: #888; cursor: pointer; font-size: 0.9rem;
+    }
+    .tab.active { color: #ff6b00; border-bottom: 2px solid #ff6b00; }
+    .section { padding: 1.2rem 1.5rem; display: none; }
+    .section.active { display: block; }
+    .section h2 { font-size: 1rem; color: #ff6b00; margin-bottom: 1rem; }
+    .order-card {
+      background: #1a1a1a; border-radius: 10px;
+      padding: 1rem; margin-bottom: 0.8rem; border: 1px solid #2a2a2a;
+    }
+    .order-card .top {
+      display: flex; justify-content: space-between; margin-bottom: 0.5rem;
+    }
+    .order-id { font-size: 0.85rem; color: #888; }
+    .status-badge {
+      font-size: 0.75rem; padding: 0.2rem 0.6rem;
+      border-radius: 20px; background: #333; color: #ff6b00;
+    }
+    .order-card .total { font-size: 0.9rem; margin-bottom: 0.8rem; color: #ccc; }
+    .actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .actions button {
+      padding: 0.4rem 0.8rem; border: none; border-radius: 6px;
+      cursor: pointer; font-size: 0.8rem; background: #2a2a2a; color: #f0f0f0;
+    }
+    .actions button:hover { background: #ff6b00; }
+    .menu-item {
+      background: #1a1a1a; border-radius: 10px;
+      padding: 0.9rem 1rem; margin-bottom: 0.8rem;
+      display: flex; justify-content: space-between;
+      align-items: center; border: 1px solid #2a2a2a;
+    }
+    .menu-item .price { color: #ff6b00; font-size: 0.85rem; }
+    .add-form {
+      background: #1a1a1a; border-radius: 10px;
+      padding: 1rem; margin-bottom: 1rem;
+      border: 1px solid #2a2a2a;
+      display: flex; flex-direction: column; gap: 0.7rem;
+    }
+    input {
+      padding: 0.7rem; border-radius: 8px;
+      border: 1px solid #333; background: #111;
+      color: #f0f0f0; font-size: 0.95rem;
+    }
+    button.submit {
+      padding: 0.8rem; background: #ff6b00;
+      color: white; border: none; border-radius: 8px;
+      font-size: 0.95rem; cursor: pointer;
+    }
+    button.submit:hover { background: #e05e00; }
+    .empty { color: #555; font-size: 0.9rem; }
+    .msg { padding: 0.5rem 1.5rem; font-size: 0.85rem; color: #ff6b00; min-height: 1.5rem; }
+    .divider { border: none; border-top: 1px solid #2a2a2a; margin: 1rem 0; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>vendor dashboard</h1>
+  <button onclick="logout()">logout</button>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('orders')">orders</button>
+  <button class="tab" onclick="switchTab('menu')">my menu</button>
+</div>
+
+<div class="msg" id="msg"></div>
+
+<div class="section active" id="orders">
+  <h2>incoming orders</h2>
+  <div id="orders-list"></div>
+</div>
+
+<div class="section" id="menu">
+  <h2>my menu</h2>
+
+  <div id="create-shop-form" style="display:none">
+    <p style="color:#888;font-size:0.85rem;margin-bottom:1rem">no shop linked yet — create yours below</p>
+    <div class="add-form">
+      <input type="text" id="shop-name" placeholder="shop name e.g. Ghetto Smocha">
+      <input type="text" id="shop-location" placeholder="location e.g. Mtongwe, KN">
+      <button class="submit" onclick="createShop()">create my shop</button>
+    </div>
+    <hr class="divider">
+  </div>
+
+  <div id="add-item-form" style="display:none">
+    <div class="add-form">
+      <input type="text" id="item-name" placeholder="item name e.g. Smocha">
+      <input type="number" id="item-price" placeholder="price in ksh">
+      <button class="submit" onclick="addItem()">add item</button>
+    </div>
+  </div>
+
+  <div id="menu-list"></div>
+</div>
+
+<script>
+  const API = 'http://127.0.0.1:5000';
+  const token = localStorage.getItem('token');
+  const role = localStorage.getItem('role');
+
+  if (!token || role !== 'vendor') window.location = '/';
+
+  let vendorId = null;
+
+  function msg(text) {
+    document.getElementById('msg').innerText = text;
+    setTimeout(() => document.getElementById('msg').innerText = '', 3000);
+  }
+
+  function logout() { localStorage.clear(); window.location = '/'; }
+
+  function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.getElementById(tab).classList.add('active');
+    event.target.classList.add('active');
+    if (tab === 'menu') loadMenu();
+  }
+
+  const statusFlow = ['placed','confirmed','preparing','ready','picked_up','delivered'];
+
+  function nextStatuses(current) {
+    const idx = statusFlow.indexOf(current);
+    return statusFlow.slice(idx + 1, idx + 2);
+  }
+
+  async function loadOrders() {
+    const res = await fetch(`${API}/orders/vendor`, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const el = document.getElementById('orders-list');
+    if (!res.ok) {
+      el.innerHTML = '<p class="empty">no orders yet — waiting for customers 👀</p>'; return;
+    }
+    const orders = await res.json();
+    if (orders.length === 0) {
+      el.innerHTML = '<p class="empty">no orders yet — waiting for customers 👀</p>'; return;
+    }
+    el.innerHTML = orders.map(o => `
+      <div class="order-card">
+        <div class="top">
+          <span class="order-id">order #${o.id}</span>
+          <span class="status-badge">${o.status}</span>
+        </div>
+        <div class="total">ksh ${o.total}</div>
+        <div class="actions">
+          ${nextStatuses(o.status).map(s => `
+            <button onclick="updateStatus(${o.id}, '${s}')">${s}</button>
+          `).join('')}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  async function updateStatus(orderId, status) {
+    const res = await fetch(`${API}/orders/${orderId}/status`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({ status })
+    });
+    if (res.ok) { msg('order #' + orderId + ' → ' + status); loadOrders(); }
+    else msg('failed to update status');
+  }
+
+  async function createShop() {
+    const name = document.getElementById('shop-name').value.trim();
+    const location = document.getElementById('shop-location').value.trim();
+    if (!name || !location) { msg('fill in both fields'); return; }
+
+    const res = await fetch(`${API}/vendors/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({ name, location })
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      vendorId = data.id;
+      document.getElementById('create-shop-form').style.display = 'none';
+      document.getElementById('add-item-form').style.display = 'block';
+      msg('shop created ✓');
+      loadMenu();
+    } else {
+      msg('failed to create shop');
+    }
+  }
+
+  async function loadMenu() {
+    if (!vendorId) {
+      const res = await fetch(`${API}/vendors/mine`, {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        vendorId = data.id;
+        document.getElementById('create-shop-form').style.display = 'none';
+        document.getElementById('add-item-form').style.display = 'block';
+      } else {
+        document.getElementById('create-shop-form').style.display = 'block';
+        document.getElementById('add-item-form').style.display = 'none';
+        document.getElementById('menu-list').innerHTML = '';
+        return;
+      }
+    }
+
+    const res = await fetch(`${API}/vendors/${vendorId}/menu`);
+    const items = await res.json();
+    const el = document.getElementById('menu-list');
+
+    if (items.length === 0) {
+      el.innerHTML = '<p class="empty">no items yet — add your first one above</p>'; return;
+    }
+
+    el.innerHTML = items.map(i => `
+      <div class="menu-item">
+        <div>
+          <span>${i.name}</span><br>
+          <span class="price">ksh ${i.price}</span>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  async function addItem() {
+    const name = document.getElementById('item-name').value.trim();
+    const price = document.getElementById('item-price').value;
+    if (!name || !price) { msg('fill in both fields'); return; }
+    if (!vendorId) { msg('create your shop first'); return; }
+
+    const res = await fetch(`${API}/vendors/${vendorId}/menu`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({ name, price: parseFloat(price) })
+    });
+
+    if (res.ok) {
+      document.getElementById('item-name').value = '';
+      document.getElementById('item-price').value = '';
+      msg(name + ' added ✓');
+      loadMenu();
+    } else {
+      msg('failed to add item');
+    }
+  }
+
+  loadOrders();
+  setInterval(loadOrders, 10000);
+</script>
+</body>
+</html>

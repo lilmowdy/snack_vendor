@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>snack_vendor | order</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: sans-serif; background: #0f0f0f; color: #f0f0f0; }
+
+    header {
+      background: #1a1a1a;
+      padding: 1rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #333;
+    }
+
+    header h1 { color: #ff6b00; font-size: 1.2rem; }
+    header span { font-size: 0.85rem; color: #888; }
+    header button {
+      background: none; border: 1px solid #555;
+      color: #f0f0f0; padding: 0.3rem 0.8rem;
+      border-radius: 6px; cursor: pointer; font-size: 0.8rem;
+    }
+
+    .tabs {
+      display: flex;
+      background: #1a1a1a;
+      border-bottom: 1px solid #333;
+    }
+
+    .tab {
+      flex: 1; padding: 0.8rem;
+      background: none; border: none;
+      color: #888; cursor: pointer; font-size: 0.9rem;
+    }
+
+    .tab.active { color: #ff6b00; border-bottom: 2px solid #ff6b00; }
+
+    .section { padding: 1.2rem 1.5rem; display: none; }
+    .section.active { display: block; }
+    .section h2 { font-size: 1rem; color: #ff6b00; margin-bottom: 1rem; }
+
+    .vendor-card {
+      background: #1a1a1a;
+      border-radius: 10px;
+      padding: 1rem;
+      margin-bottom: 0.8rem;
+      cursor: pointer;
+      border: 1px solid #2a2a2a;
+    }
+
+    .vendor-card:hover { border-color: #ff6b00; }
+    .vendor-card h3 { font-size: 0.95rem; margin-bottom: 0.2rem; }
+    .vendor-card p { font-size: 0.8rem; color: #888; }
+
+    .menu-item {
+      background: #1a1a1a;
+      border-radius: 10px;
+      padding: 0.9rem 1rem;
+      margin-bottom: 0.8rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border: 1px solid #2a2a2a;
+    }
+
+    .menu-item span { font-size: 0.9rem; }
+    .menu-item .price { color: #ff6b00; font-weight: bold; }
+    .menu-item button {
+      background: #ff6b00; border: none;
+      color: white; padding: 0.4rem 0.9rem;
+      border-radius: 6px; cursor: pointer; font-size: 0.85rem;
+    }
+
+    .order-card {
+      background: #1a1a1a;
+      border-radius: 10px;
+      padding: 1rem;
+      margin-bottom: 0.8rem;
+      border: 1px solid #2a2a2a;
+    }
+
+    .order-card .top {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.4rem;
+    }
+
+    .order-id { font-size: 0.85rem; color: #888; }
+
+    .status-badge {
+      font-size: 0.75rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 20px;
+      background: #333;
+      color: #ff6b00;
+    }
+
+    .status-badge.delivered { color: #4caf50; }
+    .status-badge.placed { color: #888; }
+
+    .order-total { font-size: 0.9rem; color: #ccc; }
+
+    .cart {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: #1a1a1a;
+      border-top: 1px solid #333;
+      padding: 1rem 1.5rem;
+    }
+
+    .cart h3 { font-size: 0.9rem; color: #888; margin-bottom: 0.5rem; }
+    .cart-items { font-size: 0.85rem; margin-bottom: 0.8rem; min-height: 1rem; }
+
+    .cart button.place {
+      width: 100%; padding: 0.8rem;
+      background: #ff6b00; color: white;
+      border: none; border-radius: 8px;
+      font-size: 1rem; cursor: pointer;
+    }
+
+    .cart button.place:disabled { background: #555; cursor: not-allowed; }
+
+    .msg { padding: 0.5rem 1.5rem; font-size: 0.85rem; color: #ff6b00; }
+    .back-btn {
+      background: none; border: none;
+      color: #ff6b00; cursor: pointer;
+      font-size: 0.85rem; margin-bottom: 1rem;
+      display: none;
+    }
+
+    .pb { padding-bottom: 160px; }
+    .empty { color: #555; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>snack_vendor</h1>
+  <span id="welcome"></span>
+  <button onclick="logout()">logout</button>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('order')">order</button>
+  <button class="tab" onclick="switchTab('history')">my orders</button>
+</div>
+
+<div class="msg" id="msg"></div>
+
+<div class="section active pb" id="order">
+  <button class="back-btn" id="back-btn" onclick="showVendors()">← back to vendors</button>
+  <h2 id="section-title">vendors near you</h2>
+  <div id="content"></div>
+</div>
+
+<div class="section" id="history">
+  <h2>my orders</h2>
+  <div id="orders-list"></div>
+</div>
+
+<div class="cart" id="cart-bar">
+  <h3>cart — <span id="cart-total">ksh 0</span></h3>
+  <div class="cart-items" id="cart-items">no items yet</div>
+  <button class="place" id="place-btn" onclick="placeOrder()" disabled>place order</button>
+</div>
+
+<script>
+  const API = 'http://127.0.0.1:5000';
+  const token = localStorage.getItem('token');
+  const name = localStorage.getItem('name');
+
+  if (!token) window.location = '/';
+
+  document.getElementById('welcome').innerText = name || '';
+
+  let cart = [];
+  let currentVendorId = null;
+
+  function msg(text) {
+    document.getElementById('msg').innerText = text;
+    setTimeout(() => document.getElementById('msg').innerText = '', 3000);
+  }
+
+  function logout() { localStorage.clear(); window.location = '/'; }
+
+  function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.getElementById(tab).classList.add('active');
+    event.target.classList.add('active');
+    document.getElementById('cart-bar').style.display = tab === 'order' ? 'block' : 'none';
+    if (tab === 'history') loadOrderHistory();
+  }
+
+  async function showVendors() {
+    currentVendorId = null;
+    document.getElementById('back-btn').style.display = 'none';
+    document.getElementById('section-title').innerText = 'vendors near you';
+    const res = await fetch(`${API}/vendors/`);
+    const vendors = await res.json();
+    const el = document.getElementById('content');
+    if (vendors.length === 0) {
+      el.innerHTML = '<p class="empty">no vendors open right now</p>'; return;
+    }
+    el.innerHTML = vendors.map(v => `
+      <div class="vendor-card" onclick="showMenu(${v.id}, '${v.name}')">
+        <h3>${v.name}</h3>
+        <p>${v.location}</p>
+      </div>
+    `).join('');
+  }
+
+  async function showMenu(vendorId, vendorName) {
+    currentVendorId = vendorId;
+    document.getElementById('back-btn').style.display = 'block';
+    document.getElementById('section-title').innerText = vendorName;
+    const res = await fetch(`${API}/vendors/${vendorId}/menu`);
+    const items = await res.json();
+    const el = document.getElementById('content');
+    if (items.length === 0) {
+      el.innerHTML = '<p class="empty">no items on menu yet</p>'; return;
+    }
+    el.innerHTML = items.map(i => `
+      <div class="menu-item">
+        <div>
+          <span>${i.name}</span><br>
+          <span class="price">ksh ${i.price}</span>
+        </div>
+        <button onclick="addToCart(${i.id}, '${i.name}', ${i.price})">add</button>
+      </div>
+    `).join('');
+  }
+
+  function addToCart(itemId, itemName, price) {
+    const existing = cart.find(c => c.item_id === itemId);
+    if (existing) existing.quantity += 1;
+    else cart.push({ item_id: itemId, name: itemName, price, quantity: 1 });
+    updateCart();
+    msg(itemName + ' added to cart');
+  }
+
+  function updateCart() {
+    const total = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
+    document.getElementById('cart-total').innerText = 'ksh ' + total;
+    document.getElementById('cart-items').innerText =
+      cart.map(i => `${i.name} x${i.quantity}`).join(', ') || 'no items yet';
+    document.getElementById('place-btn').disabled = cart.length === 0;
+  }
+
+  async function placeOrder() {
+    if (!currentVendorId) { msg('please select a vendor first'); return; }
+    const res = await fetch(`${API}/orders/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({
+        vendor_id: currentVendorId,
+        items: cart.map(i => ({ item_id: i.item_id, quantity: i.quantity }))
+      })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      msg('order #' + data.order_id + ' placed! total: ksh ' + data.total);
+      cart = [];
+      updateCart();
+    } else {
+      msg(data.error || 'order failed');
+    }
+  }
+
+  async function loadOrderHistory() {
+    const res = await fetch(`${API}/orders/mine`, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const orders = await res.json();
+    const el = document.getElementById('orders-list');
+
+    if (orders.length === 0) {
+      el.innerHTML = '<p class="empty">no orders yet — go grab something 🍽️</p>';
+      return;
+    }
+
+    el.innerHTML = orders.map(o => `
+      <div class="order-card">
+        <div class="top">
+          <span class="order-id">order #${o.id}</span>
+          <span class="status-badge ${o.status}">${o.status}</span>
+        </div>
+        <div class="order-total">ksh ${o.total}</div>
+      </div>
+    `).join('');
+  }
+
+  showVendors();
+</script>
+</body>
+</html>
